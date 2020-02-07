@@ -1,0 +1,91 @@
+on:
+  push:
+    tags:
+      - 'v*' # Run when tag matches v*, i.e. v1.0, v20.15.10
+
+name: Release
+
+env:
+  RELEASE_BIN: wrangler
+  RELEASE_DIR: artifacts
+
+  # Space separated paths to include in the archive.
+  RELEASE_ADDS: README.md LICENSE-APACHE LICENSE-MIT wrangler-demo.gif banner.png
+
+jobs:
+  build:
+    name: Build release
+
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        build: [linux, macos, windows]
+        include:
+          - build: linux
+            os: ubuntu-latest
+            rust: stable
+          - build: macos
+            os: macos-latest
+            rust: stable
+          - build: windows
+            os: windows-latest
+            rust: stable
+
+    steps:
+    - uses: actions/checkout@v1
+
+    - name: Install Rust
+      run: |
+        rustup update ${{ matrix.rust }} --no-self-update
+        rustup default ${{ matrix.rust }}
+
+    - name: Install musl-tools (Linux)
+      run: |
+        sudo apt-get update -y
+        sudo apt-get install musl-tools -y   
+      if: matrix.os == 'ubuntu-latest'   
+
+    - name: Install p7zip (MacOS)
+      run: brew install p7zip
+      if: matrix.os == 'macos-latest'
+
+    - name: Build (Linux)
+      run: |
+        rustup target add x86_64-unknown-linux-musl
+        cargo build --release --target x86_64-unknown-linux-musl --features vendored-openssl
+      if: matrix.os == 'ubuntu-latest'
+
+    - name: Build (MacOS)
+      run: cargo build --release
+      env:
+        MACOSX_DEPLOYMENT_TARGET: 10.7
+      if: matrix.os == 'macos-latest'
+
+    - name: Build (Windows)
+      run: cargo build --release
+      env:
+        RUSTFLAGS: -Ctarget-feature=+crt-static
+      if: matrix.os == 'windows-latest'
+
+    - name: Create artifact directory
+      run: mkdir ${{ env.RELEASE_DIR }}
+
+    - name: Create tarball (Linux)
+      run: 7z a -ttar -so -an ./target/x86_64-unknown-linux-musl/release/${{ env.RELEASE_BIN }} ${{ env.RELEASE_ADDS }} | 7z a -si ./${{ env.RELEASE_DIR }}/${{ env.RELEASE_BIN }}-v${{ github.ref }}-x86_64-unknown-linux-musl.tar.gz
+      if: matrix.os == 'ubuntu-latest'
+
+    - name: Create tarball (Windows)
+      run: 7z a -tzip ./${{ env.RELEASE_DIR }}/${{ env.RELEASE_BIN }}-v${{ github.ref }}-x86_64-pc-windows-msvc.tar.gz ./target/release/${{ env.RELEASE_BIN }}.exe ${{ env.RELEASE_ADDS }}
+      if: matrix.os == 'windows-latest'
+
+    - name: Create tarball (MacOS)
+      run: 7z a -tzip ./${{ env.RELEASE_DIR }}/${{ env.RELEASE_BIN }}-v${{ github.ref }}-x86_64-apple-darwin.tar.gz ./target/release/${{ env.RELEASE_BIN }} ${{ env.RELEASE_ADDS }}
+      if: matrix.os == 'macos-latest'
+
+    # Update to v2 when ready because this version double-zips the file
+    # See - https://github.com/actions/upload-artifact/issues/39
+    - uses: actions/upload-artifact@v1
+      name: Upload Archive Artifact
+      with:
+        name: ${{ runner.os }}
+        path: ${{ env.RELEASE_DIR }}/
