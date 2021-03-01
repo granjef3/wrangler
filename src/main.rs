@@ -18,7 +18,6 @@ use wrangler::installer;
 use wrangler::preview::{HttpMethod, PreviewOpt};
 use wrangler::settings;
 use wrangler::settings::global_user::GlobalUser;
-use wrangler::settings::toml::TargetType;
 use wrangler::terminal::message::{Message, Output, StdOut};
 use wrangler::terminal::{emoji, interactive, styles};
 use wrangler::version::background_check_for_updates;
@@ -682,26 +681,15 @@ fn run() -> Result<(), failure::Error> {
         let name = matches.value_of("name").unwrap_or("worker");
         let site = matches.is_present("site");
         let template = matches.value_of("template");
-        let mut target_type = None;
 
         let template = if site {
             if template.is_some() {
                 failure::bail!("You cannot pass a template and the --site flag to wrangler generate. If you'd like to use the default site boilerplate, run wrangler generate --site. If you'd like to use another site boilerplate, omit --site when running wrangler generate.")
             }
-            "https://github.com/cloudflare/worker-sites-template"
+            "https://github.com/xortive/worker-sites-template"
         } else {
-            if let Some(type_value) = matches.value_of("type") {
-                target_type = Some(TargetType::from_str(&type_value.to_lowercase())?);
-            }
-
-            let default_template = "https://github.com/cloudflare/worker-template";
-            template.unwrap_or(match target_type {
-                Some(ref pt) => match pt {
-                    TargetType::Rust => "https://github.com/cloudflare/rustwasm-worker-template",
-                    _ => default_template,
-                },
-                _ => default_template,
-            })
+            let default_template = "https://github.com/xortive/worker-template";
+            template.unwrap_or(default_template)
         };
 
         log::info!(
@@ -710,21 +698,11 @@ fn run() -> Result<(), failure::Error> {
             name
         );
 
-        commands::generate(name, template, target_type, site)?;
+        commands::generate(name, template, site)?;
     } else if let Some(matches) = matches.subcommand_matches("init") {
         let name = matches.value_of("name");
         let site = matches.is_present("site");
-        let target_type = if site {
-            // Workers Sites projects are always webpack for now
-            Some(TargetType::Webpack)
-        } else {
-            match matches.value_of("type") {
-                Some(s) => Some(settings::toml::TargetType::from_str(&s.to_lowercase())?),
-                None => None,
-            }
-        };
-
-        commands::init(name, target_type, site)?;
+        commands::init(name, site)?;
     } else if let Some(matches) = matches.subcommand_matches("build") {
         commands::build(matches)?;
     } else if let Some(matches) = matches.subcommand_matches("preview") {

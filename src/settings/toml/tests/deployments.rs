@@ -14,7 +14,7 @@ const ACCOUNT_ID: &str = "fakeaccountid";
 // TOP LEVEL TESTS
 #[test]
 fn it_errors_on_empty_get_deployments() {
-    let test_toml = WranglerToml::webpack("empty");
+    let test_toml = WranglerToml::javascript("empty");
     let toml_string = toml::to_string(&test_toml).unwrap();
     let manifest = Manifest::from_str(&toml_string).unwrap();
 
@@ -165,7 +165,7 @@ fn it_can_get_a_scheduled_no_workers_dev_no_zoned() {
 
     let crons = vec!["0 * * * *".to_owned()];
 
-    let mut test_toml = WranglerToml::webpack(script_name);
+    let mut test_toml = WranglerToml::javascript(script_name);
     test_toml.account_id = Some(ACCOUNT_ID);
     test_toml.triggers = Some(Triggers {
         crons: Some(crons.clone()),
@@ -202,7 +202,7 @@ fn it_can_get_a_scheduled_in_env_no_workers_dev_no_zoned() {
         triggers: Some(Triggers {
             crons: Some(vec!["0 * * * *".to_owned()]),
         }),
-        ..WranglerToml::webpack(script_name)
+        ..WranglerToml::javascript(script_name)
     };
     test_toml
         .env
@@ -231,7 +231,7 @@ fn it_cat_get_inherited_env_schedules() {
     let crons = vec!["0 * * * *".to_owned()];
     let env = EnvConfig::custom_script_name("inherited_schedule");
 
-    let mut test_toml = WranglerToml::webpack(script_name);
+    let mut test_toml = WranglerToml::javascript(script_name);
     test_toml.account_id = Some(ACCOUNT_ID);
     test_toml.triggers = Some(Triggers {
         crons: Some(crons.clone()),
@@ -317,7 +317,7 @@ fn it_can_get_a_multi_route_zoned_get_deployments() {
     let script_name = "multi_route_zoned";
     let patterns = [PATTERN, "blog.hostname.tld/*"];
 
-    let mut test_toml = WranglerToml::webpack(script_name);
+    let mut test_toml = WranglerToml::javascript(script_name);
     test_toml.routes = Some(patterns.to_vec());
     test_toml.zone_id = Some(ZONE_ID);
     let toml_string = toml::to_string(&test_toml).unwrap();
@@ -347,7 +347,7 @@ fn it_can_get_a_multi_route_zoned_get_deployments_workers_dev_false() {
     let script_name = "multi_route_zoned_workers_dev_false";
     let patterns = [PATTERN, "blog.hostname.tld/*"];
 
-    let mut test_toml = WranglerToml::webpack(script_name);
+    let mut test_toml = WranglerToml::javascript(script_name);
     test_toml.workers_dev = Some(false);
     test_toml.routes = Some(patterns.to_vec());
     test_toml.zone_id = Some(ZONE_ID);
@@ -378,7 +378,7 @@ fn it_can_get_multi_route_with_route() {
     let script_name = "multi_route_with_route";
     let patterns = [PATTERN];
 
-    let mut test_toml = WranglerToml::webpack(script_name);
+    let mut test_toml = WranglerToml::javascript(script_name);
     test_toml.workers_dev = Some(false);
     test_toml.routes = Some(patterns.to_vec());
     test_toml.route = Some("blog.hostname.tld/*");

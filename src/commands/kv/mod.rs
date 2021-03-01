@@ -103,7 +103,7 @@ fn url_encode_key(key: &str) -> String {
 #[cfg(test)]
 mod tests {
     use crate::commands::kv;
-    use crate::settings::toml::{KvNamespace, Target, TargetType};
+    use crate::settings::toml::{KvNamespace, Target};
 
     #[test]
     fn it_can_detect_duplicate_bindings() {
@@ -120,8 +120,6 @@ mod tests {
                 },
             ],
             name: "test-target".to_string(),
-            target_type: TargetType::Webpack,
-            webpack_config: None,
             site: None,
             vars: None,
             text_blobs: None,
