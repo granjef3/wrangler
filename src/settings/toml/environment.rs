@@ -21,7 +21,6 @@ pub struct Environment {
     pub routes: Option<Vec<String>>,
     #[serde(default, with = "string_empty_as_none")]
     pub zone_id: Option<String>,
-    pub webpack_config: Option<String>,
     pub build: Option<Builder>,
     pub private: Option<bool>,
     pub site: Option<Site>,

@@ -49,11 +49,6 @@ impl Fixture {
         self.dir.path().to_path_buf()
     }
 
-    pub fn scaffold_webpack(&self) {
-        self.create_default_package_json();
-        self.create_empty_js();
-    }
-
     pub fn get_output_path(&self) -> PathBuf {
         self.get_path().join(self.output_path)
     }

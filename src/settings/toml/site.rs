@@ -4,7 +4,7 @@ use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};
 
-use crate::commands::generate::run_generate;
+use crate::commands::generate::clone_repo;
 
 const SITE_ENTRY_POINT: &str = "workers-site";
 
@@ -40,11 +40,11 @@ impl Site {
 
     pub fn scaffold_worker(&self) -> Result<(), failure::Error> {
         let entry_point = &self.entry_point()?;
-        let template = "https://github.com/cloudflare/worker-sites-init";
+        let template = "https://github.com/xortive/worker-sites-init";
 
         if !entry_point.exists() {
             log::info!("Generating a new workers site project");
-            run_generate(entry_point.file_name().unwrap().to_str().unwrap(), template)?;
+            clone_repo(entry_point.file_name().unwrap().to_str().unwrap(), template)?;
 
             // This step is to prevent having a git repo within a git repo after
             // generating the scaffold into an existing project.

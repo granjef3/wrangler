@@ -1,5 +1,4 @@
 pub mod form;
-mod krate;
 pub mod package;
 
 pub use package::Package;

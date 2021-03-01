@@ -20,6 +20,5 @@ pub mod terminal;
 pub mod upload;
 pub mod version;
 pub mod watch;
-pub mod wranglerjs;
 
 pub mod fixtures;

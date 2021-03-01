@@ -17,7 +17,6 @@ use crate::settings::toml::environment::Environment;
 use crate::settings::toml::kv_namespace::{ConfigKvNamespace, KvNamespace};
 use crate::settings::toml::route::RouteConfig;
 use crate::settings::toml::site::Site;
-use crate::settings::toml::target_type::TargetType;
 use crate::settings::toml::triggers::Triggers;
 use crate::settings::toml::Target;
 use crate::terminal::{
@@ -30,8 +29,6 @@ use crate::terminal::{
 pub struct Manifest {
     #[serde(default)]
     pub name: String,
-    #[serde(rename = "type")]
-    pub target_type: TargetType,
     #[serde(default)]
     pub account_id: String,
     pub workers_dev: Option<bool>,
@@ -40,7 +37,6 @@ pub struct Manifest {
     pub routes: Option<Vec<String>>,
     #[serde(default, with = "string_empty_as_none")]
     pub zone_id: Option<String>,
-    pub webpack_config: Option<String>,
     pub build: Option<Builder>,
     pub private: Option<bool>,
     // TODO: maybe one day, serde toml support will allow us to serialize sites
@@ -83,7 +79,6 @@ impl Manifest {
 
     pub fn generate(
         name: String,
-        target_type: Option<TargetType>,
         config_path: &PathBuf,
         site: Option<Site>,
     ) -> Result<Manifest, failure::Error> {
@@ -103,11 +98,6 @@ impl Manifest {
             });
 
         config_template.warn_on_account_info();
-        if let Some(target_type) = &target_type {
-            if config_template.target_type != *target_type {
-                StdOut::warn(&format!("The template recommends the \"{}\" type. Using type \"{}\" may cause errors, we recommend changing the type field in wrangler.toml to \"{}\"", config_template.target_type, target_type, config_template.target_type));
-            }
-        }
 
         let default_workers_dev = match &config_template.route {
             Some(route) if route.is_empty() => Some(true),
@@ -134,9 +124,6 @@ impl Manifest {
         config_template_doc["name"] = toml_edit::value(name);
         if let Some(default_workers_dev) = default_workers_dev {
             config_template_doc["workers_dev"] = toml_edit::value(default_workers_dev);
-        }
-        if let Some(target_type) = &target_type {
-            config_template_doc["target_type"] = toml_edit::value(target_type.to_string());
         }
         if let Some(site) = site {
             if config_template.site.is_none() {
@@ -305,12 +292,6 @@ impl Manifest {
         environment_name: Option<&str>,
         preview: bool,
     ) -> Result<Target, failure::Error> {
-        // Site projects are always webpack for now; don't let toml override this.
-        let target_type = match self.site {
-            Some(_) => TargetType::Webpack,
-            None => self.target_type.clone(),
-        };
-
         /*
         From https://developers.cloudflare.com/workers/cli-wrangler/configuration#keys
         Top level: required to be configured at the top level of your wrangler.toml only; multiple environments on the same project must share this property
@@ -320,10 +301,8 @@ impl Manifest {
         Not inherited: Must be defined for every environment individually.
         */
         let mut target = Target {
-            target_type,                                 // Top level
-            account_id: self.account_id.clone(),         // Inherited
-            webpack_config: self.webpack_config.clone(), // Inherited
-            build: self.build.clone(),                   // Inherited
+            account_id: self.account_id.clone(), // Inherited
+            build: self.build.clone(),           // Inherited
             // importantly, the top level name will be modified
             // to include the name of the environment
             name: self.name.clone(), // Inherited
@@ -339,9 +318,6 @@ impl Manifest {
             target.name = self.worker_name(environment_name);
             if let Some(account_id) = &environment.account_id {
                 target.account_id = account_id.clone();
-            }
-            if let Some(webpack_config) = &environment.webpack_config {
-                target.webpack_config = Some(webpack_config.clone());
             }
             if let Some(build) = &environment.build {
                 target.build = Some(build.clone());

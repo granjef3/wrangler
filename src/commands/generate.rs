@@ -3,16 +3,13 @@ use std::path::PathBuf;
 use std::process::Command;
 use std::{env, fs};
 
-use crate::commands::validate_worker_name;
-use crate::settings::toml::{Manifest, Site, TargetType};
-use crate::{commands, install};
+use failure::ResultExt;
 
-pub fn generate(
-    name: &str,
-    template: &str,
-    target_type: Option<TargetType>,
-    site: bool,
-) -> Result<(), failure::Error> {
+use crate::commands;
+use crate::commands::validate_worker_name;
+use crate::settings::toml::{Manifest, Site};
+
+pub fn generate(name: &str, template: &str, site: bool) -> Result<(), failure::Error> {
     validate_worker_name(name)?;
 
     let dirname_exists = match directory_exists(name) {
@@ -36,7 +33,9 @@ pub fn generate(
     };
 
     log::info!("Generating a new worker project with name '{}'", new_name);
-    run_generate(&new_name, template)?;
+    clone_repo(&new_name, template)?;
+
+    update_package_json_name_if_exists(&new_name);
 
     let config_path = PathBuf::from("./").join(&name);
     // TODO: this is tightly coupled to our site template. Need to remove once
@@ -46,19 +45,55 @@ pub fn generate(
     } else {
         None
     };
-    Manifest::generate(new_name, target_type, &config_path, generated_site)?;
+    Manifest::generate(new_name, &config_path, generated_site)?;
 
     Ok(())
 }
 
-pub fn run_generate(name: &str, template: &str) -> Result<(), failure::Error> {
-    let binary_path = install::install_cargo_generate()?;
+pub fn clone_repo(name: &str, template: &str) -> Result<(), failure::Error> {
+    let args = ["clone", "--depth", "1", template, name];
 
-    let args = ["generate", "--git", template, "--name", name, "--force"];
-
-    let command = command(binary_path, &args);
+    let command = command("git", &args);
     let command_name = format!("{:?}", command);
-    commands::run(command, &command_name)
+    commands::run(command, &command_name)?;
+
+    // TODOi(now): Check for liquid template statements and warn the user their template should be updated.
+
+    fs::remove_dir_all(env::current_dir()?.join(name).join(".git"))
+        .context("Error cleaning up cloned template")?;
+    Ok(())
+}
+
+fn update_package_json_name_if_exists(name: &str) {
+    // This is a convenience optimization. If it fails, it should not error.
+    // TODO: it'd be nice to have an early_return macro for this
+
+    let current_dir = match env::current_dir() {
+        Ok(current_dir) => current_dir,
+        Err(_) => return,
+    };
+
+    let package_json_path = current_dir.join(name).join("package.json");
+
+    if package_json_path.is_file() {
+        let package_json_str = match fs::read_to_string(&package_json_path) {
+            Ok(s) => s,
+            Err(_) => return
+        };
+
+        let mut package_json = match package_json_str.parse::<serde_json::Value>() {
+            Ok(value) => value,
+            Err(_) => return,
+        };
+        package_json["name"] = serde_json::Value::from(name);
+
+        if let Ok(new_json) = serde_json::to_string_pretty(&package_json) {
+            match fs::write(&package_json_path, new_json) {
+                Ok(()) => (),
+                Err(_) => (),
+            };
+        };
+    }
 }
 
 fn generate_name(name: &str) -> Result<String, failure::Error> {
@@ -96,14 +131,14 @@ fn construct_name(name: &str, num: i32) -> String {
     format!("{}-{}", name, num)
 }
 
-fn command(binary_path: PathBuf, args: &[&str]) -> Command {
+fn command(binary: &str, args: &[&str]) -> Command {
     let mut c = if cfg!(target_os = "windows") {
         let mut c = Command::new("cmd");
         c.arg("/C");
-        c.arg(binary_path);
+        c.arg(binary);
         c
     } else {
-        Command::new(binary_path)
+        Command::new(binary)
     };
 
     c.args(args);

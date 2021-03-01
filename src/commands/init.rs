@@ -1,13 +1,9 @@
 use std::path::{Path, PathBuf};
 
 use crate::commands::validate_worker_name;
-use crate::settings::toml::{Manifest, Site, TargetType};
+use crate::settings::toml::{Manifest, Site};
 use crate::terminal::message::{Message, StdOut};
-pub fn init(
-    name: Option<&str>,
-    target_type: Option<TargetType>,
-    site_flag: bool,
-) -> Result<(), failure::Error> {
+pub fn init(name: Option<&str>, site_flag: bool) -> Result<(), failure::Error> {
     if Path::new("./wrangler.toml").exists() {
         if site_flag {
             let msg = r#"A wrangler.toml file already exists!
@@ -28,22 +24,16 @@ entry-point = "workers-site"
     let name = name.unwrap_or_else(|| &dirname);
     validate_worker_name(name)?;
 
-    let target_type = target_type.unwrap_or_default();
     let config_path = PathBuf::from("./");
 
     if site_flag {
         let site = Site::default();
-        Manifest::generate(
-            name.to_string(),
-            Some(target_type),
-            &config_path,
-            Some(site.clone()),
-        )?;
+        Manifest::generate(name.to_string(), &config_path, Some(site.clone()))?;
 
         site.scaffold_worker()?;
         StdOut::success("Successfully scaffolded workers site");
     } else {
-        Manifest::generate(name.to_string(), Some(target_type), &config_path, None)?;
+        Manifest::generate(name.to_string(), &config_path, None)?;
     }
 
     StdOut::success("Succesfully created a `wrangler.toml`");

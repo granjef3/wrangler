@@ -93,7 +93,7 @@ fn parses_same_from_config_path_as_string() {
 fn it_returns_top_level_name_when_no_env() {
     let top_level_name = "worker";
 
-    let with_name_no_env = WranglerToml::webpack(top_level_name);
+    let with_name_no_env = WranglerToml::javascript(top_level_name);
     let manifest = Manifest::from_str(&toml::to_string(&with_name_no_env).unwrap()).unwrap();
 
     assert_eq!(manifest.worker_name(None), top_level_name);

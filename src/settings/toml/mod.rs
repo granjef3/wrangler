@@ -7,7 +7,6 @@ mod route;
 mod script_format;
 mod site;
 mod target;
-mod target_type;
 mod triggers;
 
 pub use builder::Builder;
@@ -18,7 +17,6 @@ pub use route::{Route, RouteConfig};
 pub use script_format::ScriptFormat;
 pub use site::Site;
 pub use target::Target;
-pub use target_type::TargetType;
 
 #[cfg(test)]
 mod tests;
